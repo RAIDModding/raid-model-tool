@@ -87,7 +87,7 @@ namespace PD2ModelParser.Sections
         /// Byte sizes for various types of geometry buffer. Official data is consistent regarding
         /// which one goes with which <see cref="GeometryChannelTypes"/>.
         /// </summary>
-        public static readonly IReadOnlyList<uint> ItemSizes = new List<uint> { 0, 4, 8, 12, 16, 4, 4, 8, 12 };
+        public static readonly IReadOnlyList<uint> ItemSizes = new List<uint> { 0, 4, 8, 12, 16, 4, 4, 8, 12, 8 };
 
         /// <summary>
         /// Index into <see cref="ItemSizes"/>
@@ -105,9 +105,14 @@ namespace PD2ModelParser.Sections
             ItemType = type;
         }
 
-        public uint ItemSizeBytes { get { return ItemSizes[(int)ItemSize]; } }
+        public uint ItemSizeBytes { 
+            get 
+            { 
+                //Console.WriteLine(ItemSize.ToString());
+                return ItemSizes[(int)ItemSize]; 
+            } 
+        }
     }
-
     // Extracted from dsl::wd3d::D3DShaderProgram::compile
     // These are the actual names of each channel, as passed to the shader
     public enum GeometryChannelTypes
@@ -129,17 +134,19 @@ namespace PD2ModelParser.Sections
         TEXCOORD5 = 12,
         TEXCOORD6 = 13,
         TEXCOORD7 = 14,
-        BLENDINDICES = 15,
-        BLENDINDICES0 = 15,
-        BLENDINDICES1 = 16,
-        BLENDWEIGHT = 17,
-        BLENDWEIGHT0 = 17,
-        BLENDWEIGHT1 = 18,
-        POINTSIZE = 19,
-        BINORMAL = 20,
-        BINORMAL0 = 20,
-        TANGENT = 21,
-        TANGENT0 = 21,
+        TEXCOORD8 = 15,
+        TEXCOORD9 = 16,
+        BLENDINDICES = 17,
+        BLENDINDICES0 = 17,
+        BLENDINDICES1 = 18,
+        BLENDWEIGHT = 19,
+        BLENDWEIGHT0 = 19,
+        BLENDWEIGHT1 = 20,
+        POINTSIZE = 21,
+        BINORMAL = 22,
+        BINORMAL0 = 22,
+        TANGENT = 23,
+        TANGENT0 = 23,
     }
 
     [ModelFileSection(Tags.geometry_tag)]
@@ -240,7 +247,7 @@ namespace PD2ModelParser.Sections
 
             foreach (GeometryHeader head in this.Headers)
             {
-                //Console.WriteLine("Header type: " + head.item_type + " Size: " + head.item_size);
+                //Console.WriteLine("Header type: " + head.ItemType + " Size: " + head.ItemSize);
                 if (head.ItemType == GeometryChannelTypes.POSITION)
                 {
                     verts.Capacity = (int)vert_count + 1;
@@ -282,9 +289,9 @@ namespace PD2ModelParser.Sections
                     for (int x = 0; x < this.vert_count; x++)
                     {
                         Vector3 binormal_entry = new Vector3();
-                        binormal_entry.X = instream.ReadSingle();
-                        binormal_entry.Y = instream.ReadSingle();
-                        binormal_entry.Z = instream.ReadSingle();
+                        //binormal_entry.X = instream.ReadSingle();
+                        //binormal_entry.Y = instream.ReadSingle();
+                        //binormal_entry.Z = instream.ReadSingle();
                         this.binormals.Add(binormal_entry);
                     }
                 }
@@ -294,9 +301,9 @@ namespace PD2ModelParser.Sections
                     for (int x = 0; x < this.vert_count; x++)
                     {
                         Vector3 tangent_entry = new Vector3();
-                        tangent_entry.X = instream.ReadSingle();
-                        tangent_entry.Y = instream.ReadSingle();
-                        tangent_entry.Z = instream.ReadSingle();
+                        //tangent_entry.X = instream.ReadSingle();
+                        //tangent_entry.Y = instream.ReadSingle();
+                        //tangent_entry.Z = instream.ReadSingle();
                         this.tangents.Add(tangent_entry);
                     }
                 }
@@ -341,14 +348,16 @@ namespace PD2ModelParser.Sections
                     }
                 }
                 else if (head.ItemType >= GeometryChannelTypes.TEXCOORD0 &&
-                         head.ItemType <= GeometryChannelTypes.TEXCOORD7)
+                         head.ItemType <= GeometryChannelTypes.TEXCOORD9)
                 {
                     int idx = head.ItemType - GeometryChannelTypes.TEXCOORD0;
                     for (int x = 0; x < vert_count; x++)
                     {
+
                         // Previously, the Y was only inverted on the TEXCOORD0 channel, and
                         // not on the TEXCOORD1 channel. I assume that was incorrect, TODO check?
-                        Vector2 uv = new Vector2 {X = instream.ReadSingle(), Y = -instream.ReadSingle()};
+                        Vector2 uv = new Vector2 {X = (float)BitConverter.ToHalf(BitConverter.GetBytes(instream.ReadUInt16()), 0), Y = -(float)BitConverter.ToHalf(BitConverter.GetBytes(instream.ReadUInt16()), 0)
+                    };
                         UVs[idx].Add(uv);
                     }
                 }
@@ -513,7 +522,7 @@ namespace PD2ModelParser.Sections
                     }
                 }
                 else if (head.ItemType >= GeometryChannelTypes.TEXCOORD0 &&
-                         head.ItemType <= GeometryChannelTypes.TEXCOORD7)
+                         head.ItemType <= GeometryChannelTypes.TEXCOORD9)
                 {
                     int idx = head.ItemType - GeometryChannelTypes.TEXCOORD0;
                     for (int x = 0; x < this.vert_count; x++)

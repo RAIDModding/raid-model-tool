@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "PD2ModelParser": {
+      "commandName": "Project",
+      "commandLineArgs": "-v -g"
+    }
+  }
+}
